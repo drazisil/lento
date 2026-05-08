@@ -15,15 +15,19 @@ Lento has two layers:
 - **`core/system-prompt.md`** — the canonical Lento mode rules. Voice, pacing, ADHD-friendly framing, predict-then-check loops. Plain markdown, portable across agents.
 - **`adapters/<agent>/`** — agent-specific glue. Each adapter loads `core/system-prompt.md` (or a copy of it) into that agent's context using whatever mechanism the agent provides.
 
-This split is honest about what's portable and what's not. The system prompt is the bulk of Lento's identity, and that travels. The hook-based pacing enforcement does not — it's specific to Claude Code's `PostToolUse` hook protocol.
+This split is honest about what's portable and what's not. The system prompt is the bulk of Lento's identity, and that travels. The hook-based pacing enforcement does not — it's specific to Claude Code's hook protocol (`UserPromptSubmit`, `PreToolUse`, `PostToolUse`).
 
 ## Why Claude Code gets full enforcement
 
-The system prompt does the teaching. The hook does the pacing.
+Three layers, each doing different work:
 
-Without the hook, the system prompt erodes within five or six turns: the model starts chaining tool calls again, batching steps, treating "explain after" as optional. With the hook, every tool call is followed by a stderr nudge that Claude Code feeds back to the model — re-anchoring it.
+- **System prompt** — teaching. Voice, pacing instructions, pair-programmer framing. Shapes *how* the agent talks when it's behaving.
+- **`PreToolUse` hard block** — enforcement. After the first tool call of a user turn, the hook returns a JSON `permissionDecision: deny` that Claude Code treats as a hard stop. The model literally cannot make a second tool call until the user responds. This is the load-bearing piece.
+- **`PostToolUse` advisory** — handoff. Exits 2 with stderr "explain what you learned, wait for the user." Not enforcement (the model can drift past stderr feedback) — it's just a nudge so the model produces a thoughtful pause rather than a silent stop.
 
-Other agents (Cursor, Continue, Aider) don't expose a mid-conversation hook equivalent. So on those agents, Lento is system-prompt-only, and we say so plainly.
+A `UserPromptSubmit` hook resets the per-turn tool counter at the start of every turn, so `PreToolUse` can enforce one-tool-per-turn cleanly.
+
+Other agents (Cursor, Continue, Aider) don't expose mid-conversation hook equivalents — definitely not `PreToolUse` with deny-decisions. So on those agents, Lento is system-prompt-only, and we say so plainly.
 
 If/when other agents expose hook-like enforcement points, those adapters can level up.
 
@@ -38,11 +42,31 @@ We deliberately do **not** offer a `curl | bash` install. Piping unauthenticated
 
 ## Why a state file instead of a settings.json toggle
 
-The state file at `~/.claude/lento/active` is one byte (existence). Flipping it is `touch` or `rm`. The hook checks it on every tool call, so toggling takes effect on the very next tool — no reload, no race. Stuffing this into `settings.json` would mix runtime state with user configuration and would slow the toggle.
+The state file at `./.lento-mode` (in the session's working directory) is one byte (existence). Flipping it is `touch` or `rm`. The hook checks it on every tool call, so toggling takes effect on the very next tool — no reload, no race. Stuffing this into `settings.json` would mix runtime state with user configuration and would slow the toggle.
 
-## Why a PostToolUse hook, not a PreToolUse hook
+State is per-directory rather than global because Claude Code sandboxes slash command bash to the session's working directory. A global state file (e.g., `~/.local/state/lento/active`) would require the user to grant `permissions.additionalDirectories` access in their settings — not a pleasant first-run experience. Per-directory state happens to be a better fit anyway: Lento exists to slow down work on a particular task, and "this task is in this directory" is a reasonable scope.
 
-`PreToolUse` fires *before* the tool runs and would have to either block (interrupting the user's intent) or be a no-op. `PostToolUse` fires after the tool returns and lets the model see the actual result. We want the model to react to the result *and then stop*, which is exactly what `PostToolUse` with exit code 2 does — Claude Code feeds the stderr back to the model, the model integrates the feedback, and the turn ends naturally.
+## Why both `PreToolUse` AND `PostToolUse`
+
+The original v0.1 design used only `PostToolUse` with exit code 2 + stderr feedback ("stop, explain, wait"). Dogfooding the architecture exposed that this isn't enforcement — it's advice. Claude Code feeds the stderr back to the model, but the model's agentic loop keeps emitting `tool_use` blocks anyway. In one test session of 266 entries, the model chained roughly 3.6 tool calls per real user input; the user had to ctrl-c three times to stop it.
+
+The fix was to add a `PreToolUse` hook that returns the JSON shape:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny"
+  },
+  "systemMessage": "..."
+}
+```
+
+This format is the canonical block — verified by reading the rule engine in `anthropics/claude-code/plugins/hookify`. Claude Code treats it as a hard stop on the tool call. The model can't drift past it.
+
+`PostToolUse` is still useful: after the *first* tool of the turn, its stderr nudge tells the model what to *do* (explain in plain language). Without it, the model would just emit another `tool_use` block, get blocked by `PreToolUse`, and the conversation would feel like hitting a wall instead of a thoughtful pause.
+
+So: `PreToolUse` enforces, `PostToolUse` shapes the handoff. Both are needed.
 
 ## What Lento is NOT
 

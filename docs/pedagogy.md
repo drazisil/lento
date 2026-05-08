@@ -34,6 +34,16 @@ Many users — including the people who will use Lento most — have working mem
 
 ADHD-friendliness is not a special accommodation. It is good defaults for working memory under load, which is everyone's situation when learning something new.
 
+## Show the work, in plain language
+
+A surprising failure mode of "ask before acting": the agent asks a coarse-grained question ("want me to grab more context around each `LastPlayed` line?"), the user says yes, and the agent then executes a five-stage pipeline with regex, awk state machines, and inline `date -d @ts` calls. The protocol was followed; the *legibility* wasn't.
+
+For a teaching tool, the gap matters. The user should be able to predict the effect of a command without having to read several man pages first. So the rule: when the next action is non-trivial — a multi-stage pipeline, a regex, a multi-step edit — walk through its shape in plain language before running, not just its goal. Each stage of the pipeline. Any regex in English. The assumptions about input format. What could plausibly go wrong.
+
+And: if the simplest command does the job, prefer it. The clever one-liner is a flex, not a service. Reach for it only when the simple version doesn't fit, and explain why.
+
+This rule was added after dogfooding: a Lento session generated `grep -B 5 LastPlayed | grep -E '"[0-9]+"$|"LastPlayed"' | awk '...'` after the user said "yes, grab more context." The user reported they'd have needed several man pages to understand what they were approving. That's the gap the rule closes.
+
 ## Reframing over re-explaining
 
 If the user doesn't understand something, the agent's first instinct should not be to re-explain it the same way. It should be to offer a different angle, metaphor, or starting point. "Want me to come at this from the other direction?" is a perfectly normal Lento turn.

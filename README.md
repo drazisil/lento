@@ -19,7 +19,7 @@ It's optimized for *understanding*, not throughput. Use it when you're learning 
 core/system-prompt.md     The portable Lento system prompt — voice, pacing, ADHD-friendly framing.
                           This is the canonical text every adapter loads.
 adapters/
-  claude-code/            Full version: slash command + PostToolUse hook + state file.
+  claude-code/            Full version: slash commands + PostToolUse hook + state file.
                           Hook enforcement keeps pacing from drifting after a few turns.
   cursor/                 System-prompt-only. Drop core/system-prompt.md into .cursorrules.
   continue/               System-prompt-only. Add to Continue rules or custom prompts.
@@ -31,12 +31,12 @@ docs/
 
 ## Install — pick your agent
 
-| Agent       | Install path                                         | Enforcement |
-|-------------|------------------------------------------------------|-------------|
-| Claude Code | [`adapters/claude-code/`](adapters/claude-code/)     | Full (slash + hook) |
-| Cursor      | [`adapters/cursor/`](adapters/cursor/)               | Prompt-only |
-| Continue    | [`adapters/continue/`](adapters/continue/)           | Prompt-only |
-| Aider       | [`adapters/aider/`](adapters/aider/)                 | Prompt-only |
+| Agent       | Install path                                         | Enforcement | Invocations |
+|-------------|------------------------------------------------------|-------------|-------------|
+| Claude Code | [`adapters/claude-code/`](adapters/claude-code/)     | Full (slash + hook) | `/lento:on`, `/lento:off`, `/lento:status` |
+| Cursor      | [`adapters/cursor/`](adapters/cursor/)               | Prompt-only | (rules file; no toggle) |
+| Continue    | [`adapters/continue/`](adapters/continue/)           | Prompt-only | (rules file; no toggle) |
+| Aider       | [`adapters/aider/`](adapters/aider/)                 | Prompt-only | (`--read` flag; no live toggle) |
 
 **Claude Code is the only adapter with full enforcement.** It's the only target with a mid-conversation hook system that lets us re-anchor pacing after every tool call. On other agents, the system prompt erodes after a handful of turns; you can manually re-prompt to reset it.
 

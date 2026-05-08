@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Lento PostToolUse hook.
-# When the state file exists, exit 2 with stderr feedback that Claude Code
-# feeds back to the model — forcing a pause after every tool call.
-# When the state file is absent, this hook is a no-op (exit 0).
+# When the state file exists in the project working directory, exit 2 with
+# stderr feedback that Claude Code feeds back to the model — forcing a pause
+# after every tool call. When the state file is absent, this hook is a
+# no-op (exit 0).
 
-STATE_FILE="${LENTO_STATE_DIR:-$HOME/.claude/lento}/active"
+# Claude Code sets CLAUDE_PROJECT_DIR for hooks; fall back to PWD.
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PWD}"
+STATE_FILE="${LENTO_STATE_FILE:-$PROJECT_DIR/.lento-mode}"
 
 if [ ! -f "$STATE_FILE" ]; then
   exit 0
