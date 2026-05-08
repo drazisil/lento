@@ -1,0 +1,10 @@
+{
+  "name": "lento",
+  "version": "0.1.0",
+  "description": "Slow, ADHD-friendly pair-programming mode for Claude Code: one step at a time, explain, wait.",
+  "author": {
+    "name": "Molly Draven"
+  },
+  "homepage": "https://github.com/drazisil/lento",
+  "license": "MIT"
+}

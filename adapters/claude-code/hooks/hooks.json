@@ -1,0 +1,17 @@
+{
+  "description": "Lento PostToolUse hook — pauses the agent after every tool call when Lento mode is on.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tool.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,12 +1,19 @@
 ---
 description: Toggle Lento mode — slow, ADHD-friendly pair programming
-argument-hint: [on|off|status]
+argument-hint: "[on|off|status]"
 version: 0.1.0
+allowed-tools: Bash(mkdir:*), Bash(touch:*), Bash(rm:*), Bash(test:*)
 ---
 
-Run `~/.claude/lento/bin/lento $ARGUMENTS` (default to `status` if `$ARGUMENTS` is empty), then read its output.
+!`mkdir -p ~/.claude/lento && case "${ARGUMENTS:-status}" in on) touch ~/.claude/lento/active && echo "Lento: on" ;; off) rm -f ~/.claude/lento/active && echo "Lento: off" ;; status) test -f ~/.claude/lento/active && echo "Lento: on" || echo "Lento: off" ;; *) echo "Usage: /lento [on|off|status]" >&2; exit 2 ;; esac`
 
-If Lento mode is now ON, follow these rules for the rest of the session until the user turns it off or starts a new session:
+If the line above shows **Lento: on**, follow the rules below for the rest of the session, until the user turns Lento off or starts a new session.
+
+If it shows **Lento: off**, ignore the rules below and behave normally.
+
+---
+
+<!-- Mirror of core/system-prompt.md. Keep in sync when editing. -->
 
 # Lento mode
 

@@ -1,63 +1,58 @@
 # Lento
 
-> A slow, ADHD-friendly Claude Code mode. Lento turns Claude Code into a pair programmer that takes one step, explains what just happened, and waits for you before doing anything else.
+> A slow, ADHD-friendly pair-programming mode for AI coding agents. Lento tells the agent to take one step, explain what just happened, and wait for you before moving on.
 
 ## What it does
 
-When `/lento` is on:
+When Lento is on:
 
 - **One step at a time.** The agent makes one tool call — read, edit, run — and stops.
 - **Says what it's about to do, before it does it.** And invites you to predict the outcome or push back.
 - **Says what just happened, after.** No silent chains.
-- **Waits for you.** Every step goes through Claude Code's normal permission prompt.
+- **Waits for you.** Every step gets your eyes on it before the agent moves on.
 
 It's optimized for *understanding*, not throughput. Use it when you're learning something new, debugging carefully, or working in a part of a system you don't yet trust.
 
-## Install
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/drazisil/lento/main/install.sh | bash
-```
-
-Requires Claude Code already installed (the installer writes into `~/.claude/`). `jq` is recommended for the settings.json patch; the installer falls back to manual instructions if `jq` is missing.
-
-## Use
-
-Inside Claude Code:
+## Repo layout
 
 ```
-/lento on
-/lento off
-/lento status
+core/system-prompt.md     The portable Lento system prompt — voice, pacing, ADHD-friendly framing.
+                          This is the canonical text every adapter loads.
+adapters/
+  claude-code/            Full version: slash command + PostToolUse hook + state file.
+                          Hook enforcement keeps pacing from drifting after a few turns.
+  cursor/                 System-prompt-only. Drop core/system-prompt.md into .cursorrules.
+  continue/               System-prompt-only. Add to Continue rules or custom prompts.
+  aider/                  System-prompt-only. Use --read or .aider.conf.yml.
+docs/
+  design.md               What Lento is, why it's shaped this way.
+  pedagogy.md             Voice principles the system prompt encodes.
 ```
 
-From your shell (after install adds `~/.claude/lento/bin` to your PATH, or via the full path):
+## Install — pick your agent
 
-```sh
-lento on
-lento off
-lento status
-```
+| Agent       | Install path                                         | Enforcement |
+|-------------|------------------------------------------------------|-------------|
+| Claude Code | [`adapters/claude-code/`](adapters/claude-code/)     | Full (slash + hook) |
+| Cursor      | [`adapters/cursor/`](adapters/cursor/)               | Prompt-only |
+| Continue    | [`adapters/continue/`](adapters/continue/)           | Prompt-only |
+| Aider       | [`adapters/aider/`](adapters/aider/)                 | Prompt-only |
+
+**Claude Code is the only adapter with full enforcement.** It's the only target with a mid-conversation hook system that lets us re-anchor pacing after every tool call. On other agents, the system prompt erodes after a handful of turns; you can manually re-prompt to reset it.
+
+If you use an agent not listed here and you'd like to add an adapter, open an issue or PR.
 
 ## How it works
 
-Three small pieces, all under `~/.claude/`:
+Two components, both lightweight:
 
-1. **Slash command** at `~/.claude/commands/lento.md` — toggles state and loads the Lento system prompt (pair-programmer voice, one-step-then-pause, ADHD-friendly chunking, ready for pushback or reframing).
-2. **PostToolUse hook** at `~/.claude/lento/hooks/post-tool.sh` — fires after every tool call. When Lento is on, it tells the model: stop, explain what just happened, wait for the user. This is what stops drift after a few turns.
-3. **State file** at `~/.claude/lento/active` — exists when Lento is on, absent when it's off. The hook reads it on every tool call, so toggling is instant.
+1. **The system prompt** ([`core/system-prompt.md`](core/system-prompt.md)) does the *teaching* — voice, pacing rules, pair-programmer framing, predict-then-check loops. It carries most of Lento's identity and is portable across agents.
 
-The system prompt does the *teaching*. The hook does the *pacing*. Both are needed; neither alone is enough.
+2. **The PostToolUse hook** (Claude Code only) does the *pacing*. After every tool call, it tells the model: stop, explain, wait. This is what stops drift after a few turns.
 
-See [docs/design.md](docs/design.md) for the longer story and [docs/pedagogy.md](docs/pedagogy.md) for the voice principles the system prompt encodes.
+Both are needed for the full effect. Without the hook, the system prompt erodes. Without the system prompt, the hook is just confirmation fatigue.
 
-## Uninstall
-
-```sh
-~/.claude/lento/uninstall.sh
-```
-
-Removes the slash command, the hook, the state directory, and the settings.json patch.
+See [docs/design.md](docs/design.md) for more.
 
 ## License
 
